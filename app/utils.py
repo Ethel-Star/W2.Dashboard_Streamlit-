@@ -542,7 +542,7 @@ class DataUtils:
         self.plot_bottom_values(axs[2, 1], 'Avg Bearer TP DL (kbps)')
         self.plot_most_frequent(axs[2, 2], 'Avg Bearer TP DL (kbps)')
 
-        plt.show()
+        return fig
 
     def report_throughput_distribution(self):
         if 'Avg Bearer TP DL (kbps)' in self.df.columns and 'Handset Type' in self.df.columns:
@@ -603,7 +603,6 @@ class DataUtils:
             print(f"Average Throughput (kbps): {cluster_data['Avg Bearer TP DL (kbps)'].mean()}")
             print(f"Average TCP Retransmission (MB): {cluster_data['TCP DL Retrans. Vol (MB)'].mean()}")
             print(f"Average RTT (ms): {cluster_data['Avg RTT DL (ms)'].mean()}")
-
     def visualize_clusters(self):
         """Visualize clusters in 2D and 3D plots."""
         if 'Cluster' not in self.df.columns:
@@ -612,31 +611,89 @@ class DataUtils:
         # Define numeric columns for plotting
         numeric_cols = ['Avg Bearer TP DL (kbps)', 'TCP DL Retrans. Vol (MB)', 'Avg RTT DL (ms)']
         
+        figs = []  # List to store figures
+
         # 2D and 3D plotting for each cluster
         for cluster in self.df['Cluster'].unique():
             cluster_data = self.df[self.df['Cluster'] == cluster]
             
+            # Create a new figure
+            fig, axs = plt.subplots(1, 2, figsize=(14, 7))
+
             # 2D Plot
-            plt.figure(figsize=(14, 7))
-            plt.subplot(1, 2, 1)
-            plt.scatter(cluster_data['Avg Bearer TP DL (kbps)'], cluster_data['TCP DL Retrans. Vol (MB)'], 
-                        c=cluster_data['Cluster'], cmap='viridis', label=f'Cluster {cluster+1}')
-            plt.xlabel('Average Throughput (kbps)')
-            plt.ylabel('TCP DL Retransmission (MB)')
-            plt.title(f'2D Cluster Visualization - Cluster {cluster+1}')
-            plt.legend()
-            plt.colorbar(label='Cluster')
-            
+            axs[0].scatter(cluster_data['Avg Bearer TP DL (kbps)'], cluster_data['TCP DL Retrans. Vol (MB)'], 
+                           c=cluster_data['Cluster'], cmap='viridis', label=f'Cluster {cluster+1}')
+            axs[0].set_xlabel('Average Throughput (kbps)')
+            axs[0].set_ylabel('TCP DL Retransmission (MB)')
+            axs[0].set_title(f'2D Cluster Visualization - Cluster {cluster+1}')
+            axs[0].legend()
+            axs[0].colorbar(label='Cluster')
+
             # 3D Plot
-            ax = plt.subplot(1, 2, 2, projection='3d')
+            ax = fig.add_subplot(1, 2, 2, projection='3d')
             scatter = ax.scatter(cluster_data['Avg Bearer TP DL (kbps)'], cluster_data['TCP DL Retrans. Vol (MB)'], 
                                  cluster_data['Avg RTT DL (ms)'], c=cluster_data['Cluster'], cmap='viridis', label=f'Cluster {cluster+1}')
             ax.set_xlabel('Average Throughput (kbps)')
             ax.set_ylabel('TCP DL Retransmission (MB)')
             ax.set_zlabel('Average RTT (ms)')
             ax.set_title(f'3D Cluster Visualization - Cluster {cluster+1}')
-            plt.legend()
-            plt.colorbar(scatter, label='Cluster')
+            ax.legend()
+            fig.colorbar(scatter, ax=ax, label='Cluster')
+
+            # Save the figure to BytesIO object
+            buf = BytesIO()
+            plt.tight_layout()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            figs.append(buf)  # Store the BytesIO object containing the figure
+            
+            plt.close(fig)  # Close the figure to release memory
+
+        return figs
+    def visualize_clusters(self):
+        """Visualize clusters in 2D and 3D plots and return the figures."""
+        if 'Cluster' not in self.df.columns:
+            raise ValueError("Cluster labels not found. Please run apply_kmeans_clustering() first.")
+        
+        # Define numeric columns for plotting
+        numeric_cols = ['Avg Bearer TP DL (kbps)', 'TCP DL Retrans. Vol (MB)', 'Avg RTT DL (ms)']
+        
+        figs = {}  # Dictionary to store figures
+        
+        # 2D and 3D plotting for each cluster
+        for cluster in self.df['Cluster'].unique():
+            cluster_data = self.df[self.df['Cluster'] == cluster]
+            
+            fig = plt.figure(figsize=(14, 7))
+            
+            # 2D Plot
+            ax1 = fig.add_subplot(1, 2, 1)
+            ax1.scatter(cluster_data['Avg Bearer TP DL (kbps)'], cluster_data['TCP DL Retrans. Vol (MB)'], 
+                        c=cluster_data['Cluster'], cmap='viridis', label=f'Cluster {cluster+1}')
+            ax1.set_xlabel('Average Throughput (kbps)')
+            ax1.set_ylabel('TCP DL Retransmission (MB)')
+            ax1.set_title(f'2D Cluster Visualization - Cluster {cluster+1}')
+            ax1.legend()
+            fig.colorbar(ax1.collections[0], ax=ax1, label='Cluster')
+
+            # 3D Plot
+            ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+            scatter = ax2.scatter(cluster_data['Avg Bearer TP DL (kbps)'], cluster_data['TCP DL Retrans. Vol (MB)'], 
+                                 cluster_data['Avg RTT DL (ms)'], c=cluster_data['Cluster'], cmap='viridis', label=f'Cluster {cluster+1}')
+            ax2.set_xlabel('Average Throughput (kbps)')
+            ax2.set_ylabel('TCP DL Retransmission (MB)')
+            ax2.set_zlabel('Average RTT (ms)')
+            ax2.set_title(f'3D Cluster Visualization - Cluster {cluster+1}')
+            fig.colorbar(scatter, ax=ax2, label='Cluster')
 
             plt.tight_layout()
-            plt.show()
+
+            # Save figure to BytesIO object
+            buf = BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            figs[f'fig{cluster+1}'] = buf  # Store the BytesIO object with a key
+            
+            plt.close(fig)  # Close the figure to release memory
+        
+        return figs

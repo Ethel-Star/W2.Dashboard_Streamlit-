@@ -297,39 +297,107 @@ Additionally, clustering helps in identifying outliers—customers who don't fit
         st.pyplot(fig)
         st.write("User 33663706799 has indeed exhibited significant data usage across multiple platforms:")        
 elif task == "Experience Analytics":
-    st.subheader("Experience Analytics")
-    
-    # User Experience Analysis
-    st.subheader("User Experience Metrics")
-
-    experience_metrics = data_utils.analyze_user_experience()
-    for key, value in experience_metrics.items():
-        st.write(f"**{key}:**")
-        st.write(value)
-
-    st.subheader("Experience Metrics Visualization")
-    
-    # Visualization for Experience Metrics
-    fig, ax = plt.subplots(figsize=(10, 6))
-    experience_values = [value for value in experience_metrics.values()]
-    experience_labels = [key for key in experience_metrics.keys()]
-    
-    ax.bar(experience_labels, experience_values, color=['lightblue', 'lightgreen', 'lightcoral'])
-    ax.set_xlabel('Metric')
-    ax.set_ylabel('Value')
-    ax.set_title('User Experience Metrics')
-    plt.xticks(rotation=45, ha='right')
-
-    for i, value in enumerate(experience_values):
-        ax.text(i, value + 0.05 * max(experience_values), f'{value:.2f}', ha='center', va='bottom')
-
-    plt.tight_layout()
-    st.pyplot(fig)
-
-elif task == "Experience Analytics":
     st.markdown("## Experience Analytics")
-    # Code for Experience Analytics here
+    st.write(" In order to complete the Experience Analytics, we must examine device attributes (handset type) and network performance parameters (TCP retransmission, Round Trip Time (RTT), Throughput) in order to gain insights about user experience.")
+    selection = st.sidebar.radio("Select Section", ["Aggregating Information Per Customer", "Throughput and TCP Retransmissions by Handset Type"])
+    if selection == "Aggregating Information Per Customer":
+        st.subheader("Summary Statistics")
+        cleaned_df = data_utils.clean_data()
+        aggregated_df = data_utils.aggregate_customer_metrics()
+        summary_stats = data_utils.summary_statistics(['TCP DL Retrans. Vol (MB)', 'Avg RTT DL (ms)', 'Avg Bearer TP DL (kbps)'])
+        st.write(summary_stats)
+        import streamlit as st
 
+        st.write("""
+### Network Performance Summary
+
+**1. TCP Downlink Retransmission Volume (MB):**
+- **Average:** 0.472 MB
+- **Standard Deviation:** 0.206 MB
+- **Range:** 0.000002 MB to 1.726 MB
+
+**Key Insight:** The majority of connections show low TCP retransmission volumes, indicating that the network is generally reliable with minimal data loss. However, the presence of some higher values suggests that there are occasional issues with packet loss or network instability. This could impact the quality of streaming or file transfers and might require further investigation or optimization to ensure consistent performance.
+
+**2. Average Round-Trip Time Downlink (RTT DL, ms):**
+- **Average:** 41.75 ms
+- **Standard Deviation:** 14.00 ms
+- **Range:** 0.000 ms to 98.00 ms
+
+**Key Insight:** The average round-trip time is fairly low, which is good news for applications requiring real-time interaction, such as online gaming or video conferencing. However, the wide range, with some values reaching up to 98 ms, indicates that some users might experience noticeable delays. High latency can affect user experience and may need attention to identify and address the sources of delay, such as network congestion or routing issues.
+
+**3. Average Bearer Throughput Downlink (TP DL, kbps):**
+- **Average:** 1949.57 kbps
+- **Standard Deviation:** 5317.30 kbps
+- **Range:** 0.000 kbps to 30523.00 kbps
+
+**Key Insight:** The data shows a significant variation in throughput, with a mean value of nearly 2 Mbps but a large standard deviation. This suggests that while some users benefit from very high speeds, others may experience much lower throughput. This disparity could be due to varying network conditions, user density, or equipment capabilities. Addressing this variability might involve network upgrades, optimizing resource allocation, or improving signal coverage to ensure a more consistent user experience across the network.
+""")
+        st.subheader("Top 10, bottom 10, and most frequent values for TCP, RTT, and Throughput.")
+        fig=data_utils.plot_all_statistics()
+        st.pyplot(fig)
+    elif selection == "Throughput and TCP Retransmissions by Handset Type":
+        st.subheader("Distribution of Average Throughput and TCP Retransmissions by Handset Type")
+        throughput_distribution = data_utils.report_throughput_distribution()
+        print("Average Throughput Distribution per Handset Type:")
+        st.dataframe(throughput_distribution, use_container_width=True)
+        st.write("""
+        **Performance Disparity:** There is a noticeable disparity in both throughput and TCP retransmissions among different handset types. Higher-end devices generally perform better in terms of throughput and show lower retransmission volumes.
+    
+        **User Experience:** Users with older or lower-end devices might face slower data speeds and less reliable connections, highlighting potential areas for network and device improvement.
+        """)
+        data_utils.scale_numeric_data()
+        data_utils.apply_kmeans_clustering(n_clusters=3)
+        st.subheader("Cluster Centers")
+        cluster_centers_df = data_utils.get_cluster_centers()
+        st.dataframe(cluster_centers_df, use_container_width=True)
+        st.subheader("Cluster Descriptions")
+
+# Description for Cluster 1
+        st.write("**Cluster 1 Description:**")
+        st.write("Average Throughput (kbps): 190.49")
+        st.write("Average TCP Retransmission (MB): 0.52")
+        st.write("Average RTT (ms): 40.65")
+        st.write("")  # Add a blank line
+
+# Description for Cluster 2
+        st.write("**Cluster 2 Description:**")
+        st.write("Average Throughput (kbps): 201.95")
+        st.write("Average TCP Retransmission (MB): 0.52")
+        st.write("Average RTT (ms): 40.93")
+        st.write("")  # Add a blank line
+
+# Description for Cluster 3
+        st.write("**Cluster 3 Description:**")
+        st.write("Average Throughput (kbps): 10007.43")
+        st.write("Average TCP Retransmission (MB): 0.26")
+        st.write("Average RTT (ms): 46.22")
+    # Print cluster descriptions
+        st.subheader("Cluster Descriptions")
+        cluster_descriptions = data_utils.describe_clusters()
+        st.dataframe(cluster_descriptions, use_container_width=True)
+        figs = data_utils.visualize_clusters()
+        for fig_key, buf in figs.items():
+            st.write(fig_key)
+            st.image(buf, caption=fig_key)
+        st.subheader("Cluster Analysis")
+
+# Analysis of Cluster 1
+        st.write("""
+**Cluster 1 Analysis:**
+The analysis of Cluster 1 reveals moderate network performance. It has an average throughput of **190.49 kbps**, a low TCP retransmission volume of **0.52 MB**, and an RTT of **40.65 ms**. This suggests that users in this cluster experience steady, average-speed connections.
+""")
+
+# Analysis of Cluster 2
+        st.write("""
+**Cluster 2 Analysis:**
+Cluster 2 demonstrates slightly improved performance over Cluster 1. It features a higher average throughput of **201.95 kbps**, similar retransmission rates of **0.52 MB**, and an RTT of **40.93 ms**. This indicates that users in this cluster enjoy slightly better network speeds but with comparable overall performance.
+""")
+
+# Analysis of Cluster 3
+        st.write("""
+**Cluster 3 Analysis:**
+Cluster 3 stands out significantly with an average throughput of **10,007.43 kbps**, far exceeding the other clusters. It also has a smaller TCP retransmission volume of **0.26 MB**, indicating more efficient data delivery. However, the RTT for this cluster is greater at **46.22 ms**, suggesting a minor trade-off in latency for increased throughput. Overall, Cluster 3 likely represents users with substantially higher bandwidth or better network conditions, while Clusters 1 and 2 reflect more typical user experiences, with Cluster 2 showing a minor improvement in throughput.
+""")
 elif task == "Satisfaction Analysis":
     st.markdown("## Satisfaction Analysis")
     # Code for Satisfaction Analysis here
