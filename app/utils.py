@@ -256,11 +256,14 @@ class DataUtils:
                     ax.set_ylabel('Value')
         
             plt.tight_layout(rect=[0, 0, 1, 0.96])
-            plt.show()
-
+            return fig
+    # Generate metric names for titles
         metric_names = [metric.replace('_', ' ').title() for metric in metrics]
-        # Plot metrics
-        plot_metrics(cluster_metrics, metrics, metric_names)
+        fig = plot_metrics(cluster_metrics, metrics, metric_names)
+    
+    # Return the cluster metrics and the figure
+        return cluster_metrics, fig
+   
     def aggregate_user_traffic(self):
         # Aggregating user total traffic per application using MSISDN
         self.application_traffic = self.df.groupby('MSISDN').agg({
@@ -299,7 +302,7 @@ class DataUtils:
                 axes[i].set_title(f"No Data for {app}")
 
         plt.tight_layout()
-        plt.show()
+        return fig
     def cluster_analysis(self, columns_to_scale, max_k=10, n_clusters=None, use_mini_batch=False):
     
         # Preprocess the data
