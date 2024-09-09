@@ -8,7 +8,7 @@ from utils import DataUtils
 from io import BytesIO
 
 # Define the file path
-data_path = r'E:\2017.Study\Tenx\Week-2\Dashboard_Streamlit\Data\Week2_challenge_data_source(CSV).csv'
+data_path = r'E:\2017.Study\Tenx\Week-2\Data\data\Week2_challenge_data_source(CSV).csv'
 
 # Load the data
 df = pd.read_csv(data_path, encoding='ISO-8859-1')
@@ -236,7 +236,7 @@ elif task == "User Overview Analysis":
 elif task == "User Engagement Analysis":
     st.subheader("User Engagement Analysis")
 
-    selection = st.sidebar.radio("Select Section", ["Engagement Metrics", "K-Means Clustering", "Cluster Metrics"])
+    selection = st.sidebar.radio("Select Section", ["Engagement Metrics", "K-Means Clustering", "Cluster Metrics","Aggregated User Traffic"])
 
     if selection == "Engagement Metrics":
         st.subheader("Customer Engagement Metrics")
@@ -269,11 +269,33 @@ Additionally, clustering helps in identifying outliers—customers who don't fit
 """)
     elif selection == "Cluster Metrics":
             st.subheader("Cluster Metrics Analysis")
-            
-            # Compute and display cluster metrics
-            cluster_metrics = data_utils.compute_and_plot_cluster_metrics()
+            df=data_utils.analyze_customer_engagement() 
+            df_with_clusters, kmeans_model = data_utils.perform_kmeans_clustering(k=3)
+
+    # Define the metrics to be used for cluster analysis
+            metrics = ['Session_duration', 'DL_data', 'UL_data', 'Total DL (MB)', 'Total UL (MB)']
+    
+    # Compute and display cluster metrics
+            cluster_metrics, fig = data_utils.compute_and_plot_cluster_metrics(metrics)  # Pass 'metrics' as an argument
+    
+    # Display the computed cluster metrics
             st.write(cluster_metrics)
+            st.pyplot(fig)
+    elif selection == "Aggregated User Traffic":
+        st.subheader("Aggregated User Traffic")
+        df=data_utils.analyze_customer_engagement() 
+        data_utils.aggregate_user_traffic()
+        data_utils.top_engaged_users()
+        # Plot the top 3 most used applications
+        st.write("Top 10 engaged users for each application:")
+        for app, top_users in data_utils.top_10_users_per_app.items():
+            st.write(f"Top 10 users for {app}:")
+            st.write(top_users)  # Display top users for each application
         
+        fig= data_utils.plot_top_applications()
+        
+        st.pyplot(fig)
+        st.write("User 33663706799 has indeed exhibited significant data usage across multiple platforms:")        
 elif task == "Experience Analytics":
     st.subheader("Experience Analytics")
     
