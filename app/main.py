@@ -400,4 +400,12 @@ Cluster 3 stands out significantly with an average throughput of **10,007.43 kbp
 """)
 elif task == "Satisfaction Analysis":
     st.markdown("## Satisfaction Analysis")
-    # Code for Satisfaction Analysis here
+    selection = st.sidebar.radio("Select Section", ["Satisfaction Score", "Regression Model"])
+    
+
+# Display your name at the bottom of the sidebar
+st.sidebar.markdown("""
+<div style='position: absolute; bottom: 0; width: 100%; text-align: center;'>
+    <strong>10 Academy: Ethel.C</strong>
+</div>
+""", unsafe_allow_html=True)

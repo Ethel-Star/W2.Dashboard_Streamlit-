@@ -697,3 +697,101 @@ class DataUtils:
             plt.close(fig)  # Close the figure to release memory
         
         return figs
+    
+    def calculate_engagement_scores(self):
+        if self.kmeans is None:
+            raise ValueError("K-means clustering has not been performed yet.")
+        least_engaged_cluster = self.df['Cluster'].value_counts().idxmin()
+        print(f"Least engaged cluster: {least_engaged_cluster}")
+        metrics = ['Session_duration', 'DL_data', 'UL_data', 'Total DL (MB)', 'Total UL (MB)']
+        least_engaged_centroid = self.kmeans.cluster_centers_[least_engaged_cluster]
+        print(f"Centroid of least engaged cluster: {least_engaged_centroid}")
+        user_metrics = self.df[metrics].values
+        engagement_scores = np.linalg.norm(user_metrics - least_engaged_centroid, axis=1)
+        self.df['Engagement_score'] = engagement_scores
+        return self.df
+
+    def calculate_experience_scores(self):
+        """Calculate experience score for each user based on distance to the worst experience cluster."""
+        if self.kmeans is None:
+            raise ValueError("KMeans model is not available. Please run apply_kmeans_clustering() first.")
+            
+        cluster_centers_df = self.get_cluster_centers()
+        
+        # Find the index of the cluster with the worst experience (highest RTT)
+        worst_cluster_idx = cluster_centers_df['Avg RTT DL (ms)'].idxmax()
+        
+        # Convert the cluster index from the cluster center DataFrame to integer
+        worst_cluster_num = int(worst_cluster_idx.split()[-1]) - 1  # Assuming cluster labels are like 'Cluster 1', 'Cluster 2', etc.
+        
+        # Get the centroid of the worst experience cluster
+        worst_cluster_centroid = self.kmeans.cluster_centers_[worst_cluster_num]
+        
+        # Calculate the Euclidean distance between each user's data point and the worst cluster centroid
+        self.df['Experience_score'] = np.linalg.norm(self.scaled_data - worst_cluster_centroid, axis=1)
+        
+        print("Experience scores calculated.")
+        return self.df
+    
+    # User Satsfaction Analysis 
+
+    def preprocess_data(self):
+        # Assuming the satisfaction score is already calculated in your merged DataFrame
+        pass  # Skip as no further preprocessing is needed
+
+    def train_and_predict_model(self):
+        # Prepare data for modeling
+        X = self.df[['Engagement_score', 'Experience_score']]
+        y = self.df['Satisfaction_score']
+        
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        # Train the regression model
+        self.model = LinearRegression()
+        self.model.fit(X_train, y_train)
+        
+        # Make predictions
+        predictions = self.model.predict(X_test)
+        
+        # Create a DataFrame with predictions and actual values
+        predictions_df = pd.DataFrame({
+            'MSISDN': self.df['MSISDN'].iloc[X_test.index],  # Track MSISDN
+            'Actual': y_test,
+            'Predicted': predictions
+        })
+        
+        return self.model, predictions_df
+
+    def plot_predictions_vs_actual(self, predictions_df):
+        plt.figure(figsize=(10, 6))
+        plt.scatter(predictions_df['Actual'], predictions_df['Predicted'], alpha=0.5)
+        plt.plot([min(predictions_df['Actual']), max(predictions_df['Actual'])], 
+                 [min(predictions_df['Actual']), max(predictions_df['Actual'])], 
+                 color='red', linestyle='--')
+        plt.xlabel('Actual Satisfaction Score')
+        plt.ylabel('Predicted Satisfaction Score')
+        plt.title('Actual vs Predicted Satisfaction Score')
+        return fig
+        
+    def run_kmeans_clustering(self, n_clusters=2):
+        """Runs K-means clustering on Engagement_score and Experience_score."""
+        df_kmeans = self.df[['Engagement_score', 'Experience_score']]
+        
+        # Define and fit the K-means model
+        kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+        self.df['Cluster'] = kmeans.fit_predict(df_kmeans)
+        
+        # Return the cluster centers for analysis
+        return kmeans.cluster_centers_
+
+    def visualize_clusters(self):
+        """Visualize the clusters using a scatter plot."""
+        plt.figure(figsize=(10, 6))
+        sns.scatterplot(x='Engagement_score', y='Experience_score', hue='Cluster', data=self.df, palette='viridis', s=100)
+        plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s=300, c='red', label='Centroids')
+        plt.title('K-means Clustering (k=2)')
+        plt.xlabel('Engagement Score')
+        plt.ylabel('Experience Score')
+        plt.legend()
+        plt.show()
